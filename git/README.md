@@ -22,3 +22,8 @@ git commit -a | git commit -m 'initial commit'
 ```bash
 git push
 ```
+
+* Обновление локальной директории
+```bash
+git pull
+```
