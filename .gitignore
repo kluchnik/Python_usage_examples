@@ -1,0 +1,14 @@
+# jupyter file:
+.*/
+
+# python cache file:
+__pycache__/
+*.py[cod]
+
+# virtual disk and iso
+*.cqow2
+*.iso
+
+# image
+#/**/*.jpg
+#/**/*.png
