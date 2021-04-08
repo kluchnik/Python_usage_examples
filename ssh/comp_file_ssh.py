@@ -51,6 +51,7 @@ class Comparison():
         self.__line_stdout = {}
         self.__line_stderr = {}
         self.__extra_param = ''
+        self.__ignore_name = '.*'
         self.__check_md5sum = False
         self.__file_list = {'out': {}, 'error': {}}
 
@@ -106,6 +107,10 @@ class Comparison():
         ''' Вернуть ошибку выполнение ssh-команды '''
         return self.__line_stderr
 
+    def get_file_list(self):
+        ''' Вернуть преобразованный список файлов и информации к ним '''
+        return self.__file_list
+
     def set_extra_param(self, param=''):
         '''
            Установить дополнительные параметры для поиска файлов
@@ -116,6 +121,17 @@ class Comparison():
     def get_extra_param(self):
         ''' Вернуть дополнительный параметр для поиска файлов '''
         return self.__extra_param
+
+    def set_ignore_name(self, ignore_name=None):
+        '''
+           Установить имя файла для игнорирования поиска
+           Например для игнорирования системных файлов необходимо использовать параметр <object>.set_extra_param('.*')
+        '''
+        self.__ignore_name = ignore_name
+
+    def get_ignore_name(self):
+        ''' Вернуть имя файла для игнорирования поиска '''
+        return self.__ignore_name
 
     def set_check_md5sum(self, status=False):
         ''' Установить провеку КС для файлов по алгоритму md5 '''
@@ -163,42 +179,65 @@ class Comparison():
             self.set_line_stdout(pc_name, [''])
             self.set_line_stderr(pc_name,['Ошибка {}, при выполнении ssh-команды: {}'.format(exc, cmd)])
 
-    def get_file_status(self):
+    def config_find(self, directory):
+        ''' Конфигурация поиска файлов '''
+        extra_param = self.__extra_param
+        ignore_name = '-not -name "{}"'.format(self.__ignore_name) if self.__ignore_name else ''
+        check_md5sum = ('md5=($(md5sum -b "$1")); echo -ne "$md5\n";') if self.__check_md5sum else ('echo -ne "-\n";')
+        cmd = '''find {0} {1}  -type f {2} -printf "%p\t%h\t%f\t%u\t%g\t%s\t%TY-%Tm-%Td %TT\t" -exec bash -c '{3}' excec-sh {{}} ';'
+              '''.format(directory, extra_param, ignore_name, check_md5sum)
+        return cmd
+
+    def run_file_status(self):
         ''' Подключение по ssh и сбор информации о файлах '''
-        if self.__check_md5sum:
-            cmd = '''
-                echo -e 'File:\tSize:\tModify:\tMD5sum:'
-                find {0} {1} -type f -not -name ".*" -exec bash -c '
-                    stat --printf="%N\t%s\t%y\t" "$1";
-                    md5=($(md5sum -b "$1"));
-                    echo -ne "$md5\n";
-                ' excec-sh {{}} ';'
-            '''
-        else:
-            cmd = '''
-                echo -e 'File:\tSize:\tModify:\tMD5sum:'
-                find {0} {1} -type f -not -name ".*" -exec bash -c '
-                    stat --printf="%N\t%s\t%y\t" "$1";
-                    echo -ne "-\n";
-                ' excec-sh {{}} ';'
-            '''
-        # Подключение к компьютерам для сбора информации
         for pc_name in self.__parameters.keys():
             if self.connect(pc_name):
                 directory = self.__parameters[pc_name]['directory']
-                self.command(pc_name, cmd.format(directory, self.__extra_param))
+                self.command(pc_name, self.config_find(directory))
                 self.disconnect()
 
     def create_file_list(self):
-        ''' Создать таблицу сравнения файлов '''
+        '''
+           Создать таблицу сравнения файлов
+           in:
+           Полученные результаты после сканирования имею вид:
+           {'name_pc_1': 'path_file_1 \\t dir_file_1 \\t name_file_1 \\t user_f1 \\t group_f1 \\t size_f1 \\t date_modify_f1 \\t md5sum_f1 \\n
+                          path_file_2 \\t dir_file_2 \\t name_file_2 \\t user_f2 \\t group_f2 \\t size_f2 \\t date_modify_f2 \\t md5sum_f2 \\n
+                          path_file_3 \\t dir_file_3 \\t name_file_3 \\t user_f3 \\t group_f3 \\t size_f3 \\t date_modify_f3 \\t md5sum_f3 \\n',
+           'name_pc_2': 'path_file_1 \\t dir_file_1 \\t name_file_1 \\t user_f1 \\t group_f1 \\t size_f1 \\t date_modify_f1 \\t md5sum_f1 \\n
+                          path_file_2 \\t dir_file_2 \\t name_file_2 \\t user_f2 \\t group_f2 \\t size_f2 \\t date_modify_f2 \\t md5sum_f2 \\n
+                          path_file_3 \\t dir_file_3 \\t name_file_3 \\t user_f3 \\t group_f3 \\t size_f3 \\t date_modify_f3 \\t md5sum_f3 \\n',
+           'name_pc_3': 'path_file_1 \\t dir_file_1 \\t name_file_1 \\t user_f1 \\t group_f1 \\t size_f1 \\t date_modify_f1 \\t md5sum_f1 \\n
+                          path_file_2 \\t dir_file_2 \\t name_file_2 \\t user_f2 \\t group_f2 \\t size_f2 \\t date_modify_f2 \\t md5sum_f2 \\n
+                          path_file_3 \\t dir_file_3 \\t name_file_3 \\t user_f3 \\t group_f3 \\t size_f3 \\t date_modify_f3 \\t md5sum_f3 \\n'
+           }
+           out:
+           Таблица сравнения имеет следующую структуру:
+           {'path_file_1': {
+               'name_pc_1' : ('dir_file_1', 'name_file_1', 'user_f1', 'group_f1', 'size_f1', 'date_modify_f1', 'md5sum_f1'),
+               'name_pc_2' : ('dir_file_1', 'name_file_1', 'user_f1', 'group_f1', 'size_f1', 'date_modify_f1', 'md5sum_f1'),
+               'name_pc_3' : ('dir_file_1', 'name_file_1', 'user_f1', 'group_f1', 'size_f1', 'date_modify_f1', 'md5sum_f1')
+               }
+           'path_file_2': {
+               'name_pc_1' : ('dir_file_2', 'name_file_2', 'user_f2', 'group_f2', 'size_f2', 'date_modify_f2', 'md5sum_f2'),
+               'name_pc_2' : ('dir_file_2', 'name_file_2', 'user_f2', 'group_f2', 'size_f2', 'date_modify_f2', 'md5sum_f2'),
+               'name_pc_3' : ('dir_file_2', 'name_file_2', 'user_f2', 'group_f2', 'size_f2', 'date_modify_f2', 'md5sum_f2')
+               }
+           'path_file_3': {
+               'name_pc_1' : ('dir_file_3', 'name_file_3', 'user_f3', 'group_f3', 'size_f3', 'date_modify_f3', 'md5sum_f3'),
+               'name_pc_2' : ('dir_file_3', 'name_file_3', 'user_f3', 'group_f3', 'size_f3', 'date_modify_f3', 'md5sum_f3'),
+               'name_pc_3' : ('dir_file_3', 'name_file_3', 'user_f3', 'group_f3', 'size_f3', 'date_modify_f3', 'md5sum_f3')
+               }
+           }
+        '''
         pc_name_list = self.__line_stdout.keys()
         # Проходим по всем компьютерам с которых собрали информацию о файлах
         for pc_name in pc_name_list:
             # Структурируем информацию
-            for item in self.__line_stdout[pc_name].split('\n')[1:-1]:
-                data = item.split('\t')
+            for item in self.__line_stdout[pc_name].split('\n')[:-1]:
+                data = tuple(item.split('\t'))
                 try:
-                    file_name = data[0][1:-1]
+                    file_name = data[0]
                     if file_name:
                         # Если в отчете отсутсвует ключ с именм файла, то мы его создаем
                         if file_name not in self.__file_list['out'].keys():
@@ -206,9 +245,9 @@ class Comparison():
                         # Если для компьютеров не задано значения параметор файла, то мы зполняем его пустым значением
                         for pc_name_check in pc_name_list:
                             if pc_name_check not in self.__file_list['out'][file_name].keys():
-                                self.__file_list['out'][file_name][pc_name_check] = ('-', '-', '-')
+                                self.__file_list['out'][file_name][pc_name_check] = tuple(['-' for x in range(len([data]) - 1)])
                         # Обновляем значения параметров для заданного файла расположенного на конкретном компьютере
-                        self.__file_list['out'][file_name][pc_name] = (data[1], data[2], data[3])
+                        self.__file_list['out'][file_name][pc_name] = data[1:]
                 except Exception as exc:
                     self.__file_list['error']['parsing'] += 'pc: {}, data: {}, msg_error: {}\n'.format(pc_name, data, exc)
             if pc_name in self.__file_list['error'].keys():
@@ -230,7 +269,7 @@ class Comparison():
             mode_txt = 'тоько совпадающие файлы'
         else:
             mode_txt = "Не корректно задан режим проверки файлов, используйте один из параметров <object>.get_report(mode='all'|'match'|'diff')"
-        self.get_file_status()
+        self.run_file_status()
         self.create_file_list()
         try:
             messange = '---------------------------------\n'
@@ -246,7 +285,7 @@ class Comparison():
                 if mode == 'all':
                     messange += 'File: {}\n'.format(file_name)
                     for pc_name in data.keys():
-                        messange += '\t{}: {}\t{}\t{}\n'.format(pc_name, data[pc_name][0], data[pc_name][1], data[pc_name][2])
+                        messange += '\t{}: {}\n'.format(pc_name, '\t'.join(data[pc_name]))
                 elif mode == 'match':
                     size = ()
                     md5sum = ()
@@ -256,7 +295,7 @@ class Comparison():
                     if len(set(size)) == 1 and len(set(md5sum)) == 1:
                         messange += 'File: {}\n'.format(file_name)
                         for name_pc in data.keys():
-                            messange += '\t{}: {}\t{}\t{}\n'.format(pc_name, data[pc_name][0], data[pc_name][1], data[pc_name][2])
+                            messange += '\t{}: {}\n'.format(pc_name, '\t'.join(data[pc_name]))
                 elif mode == 'diff':
                     size = ()
                     md5sum = ()
@@ -266,7 +305,7 @@ class Comparison():
                     if len(set(size)) != 1 or len(set(md5sum)) != 1:
                         messange += 'File: {}\n'.format(file_name)
                         for name_pc in data.keys():
-                            messange += '\t{}: {}\t{}\t{}\n'.format(pc_name, data[pc_name][0], data[pc_name][1], data[pc_name][2])
+                            messange += '\t{}: {}\n'.format(pc_name, '\t'.join(data[pc_name]))
             messange += '------------- error -------------\n'
             for item in self.__file_list['error'].keys():
                 messange += '\t{}:\n{}'.format(item, '\n'.join(self.__file_list['error'][item]))
