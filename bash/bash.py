@@ -1,27 +1,27 @@
 '''
---------------------
-Модуль для выполнения bash команд в консоли:
+-------------------- Модуль для выполнения bash-команд в консоли --------------------
+Пример использования:
 --------------------
 import bash
 
-bash_c = bash.Commands()
+bash_ = bash.Commands()
 command = 'for ((i=1;i<=3;i++)); do echo $i; sleep 1; done'
 
-bash_c.process(command)
+bash_.process(command)
 
-bash_c.command(command)
-stdin, stdout, stderr = bash_c.get_line_stdin(), bash_c.get_line_stdout(), bash_c.get_line_stderr()
+bash_.command(command)
+stdin, stdout, stderr = bash_.get_line_stdin(), bash_.get_line_stdout(), bash_.get_line_stderr()
 print('stdin:\\n{}\\nstdout:\\n{}\\nstderr:\\n{}'.format(stdin, stdout, stderr))
 
-result = bash_c.command_script(command, 'test script')
+result = bash_.command_script(command, 'test script')
 print(result)
 
 command = 'date; whoami; pwd'
-result = bash_c.command_script(command, 'test script')
+result = bash_.command_script(command, 'test script')
 print(result)
 
 command = ['date', 'whoami', 'pwd']
-result = bash_c.command_script(command, 'test script')
+result = bash_.command_script(command, 'test script')
 print(result)
 
 command = \'\'\'
@@ -29,10 +29,11 @@ date
 whoami
 pwd
 \'\'\'
-result = bash_c.command_script(command, 'test script')
+result = bash_.command_script(command, 'test script')
 print(result)
 --------------------
 '''
+
 import subprocess
 
 
@@ -94,3 +95,8 @@ class Commands():
         else:
             messange += ('\nОшибка выполнения сценария:\n{}'.format(script))
         return messange
+
+if __name__ == '__main__':
+    print('Даннный файл представляет собой модуль для использования в python')
+    parameters = globals()
+    print(parameters['__doc__'])

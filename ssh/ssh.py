@@ -1,33 +1,40 @@
 '''
---------------------
-Модуль для выполнения ssh-команд:
+-------------------- Модуль для выполнения ssh-команд --------------------
+ver.2.1
+Пример использования:
 --------------------
 import ssh
 
-ssh_c = ssh.Commands()
+ssh_ = ssh.Commands()
 ssh_parameters = {'ip':'127.0.0.1', 'port':'22', 'login':'user', 'password':'12345678'}
-ssh_c.set_parameters(**ssh_parameters)
+ssh_.set_parameters(**ssh_parameters)
 
 command = 'for ((i=1;i<=3;i++)); do echo $i; sleep 1; done'
 
-_ = ssh_c.connect()
-ssh_c.command_daemon(command)
-stdin, stdout, stderr = ssh_c.get_line_stdin(), ssh_c.get_line_stdout(), ssh_c.get_line_stderr()
+print('SSH status: {}'.format(ssh_.get_status_connect()))
+_ = ssh_.connect()
+print('SSH status: {}'.format(ssh_.get_status_connect()))
+ssh_.command_daemon(command)
+stdin, stdout, stderr = ssh_.get_line_stdin(), ssh_.get_line_stdout(), ssh_.get_line_stderr()
 print('ssh-stdin:\\n{}\\nssh-stdout:\\n{}\\nssh-stderr:\\n{}'.format(stdin, stdout, stderr))
-ssh_c.command(command)
-stdin, stdout, stderr = ssh_c.get_line_stdin(), ssh_c.get_line_stdout(), ssh_c.get_line_stderr()
+ssh_.command(command)
+stdin, stdout, stderr = ssh_.get_line_stdin(), ssh_.get_line_stdout(), ssh_.get_line_stderr()
 print('ssh-stdin:\\n{}\\nssh-stdout:\\n{}\\nssh-stderr:\\n{}'.format(stdin, stdout, stderr))
-_ = ssh_c.disconnect()
+ssh_.disconnect()
 
-result = ssh_c.command_script(command, 'test script')
+result = ssh_.command_script(command, 'test script')
+ssh_.get_status_connect()
+print('SSH status: {}'.format(ssh_.get_status_connect()))
 print(result)
 
 command = 'date; whoami; pwd'
-result = ssh_c.command_script(command, 'test script')
+result = ssh_.command_script(command, 'test script')
+print('SSH status: {}'.format(ssh_.get_status_connect()))
 print(result)
 
 command = ['date', 'whoami', 'pwd']
-result = ssh_c.command_script(command, 'test script')
+result = ssh_.command_script(command, 'test script')
+print('SSH status: {}'.format(ssh_.get_status_connect()))
 print(result)
 
 command = \'\'\'
@@ -35,7 +42,8 @@ date
 whoami
 pwd
 \'\'\'
-result = ssh_c.command_script(command, 'test script')
+result = ssh_.command_script(command, 'test script')
+print('SSH status: {}'.format(ssh_.get_status_connect()))
 print(result)
 --------------------
 '''
@@ -47,7 +55,7 @@ import paramiko
 
 
 class Commands():
-    ''' Удаленое выполнение ssh-команд'''
+    ''' Удаленое выполнение ssh-команд '''
     def __init__(self):
         self.__ssh = paramiko.SSHClient()
         self.__parameters = {
@@ -55,6 +63,7 @@ class Commands():
             'port': '22',
             'username': 'user',
             'password': '12345678'}
+        self.__status_connect = None
         self.__line_stdin = None
         self.__line_stdout = None
         self.__line_stderr = None
@@ -87,6 +96,10 @@ class Commands():
     def get_parameters(self):
         ''' Вернуть параметры '''
         return self.__parameters
+
+    def get_status_connect(self):
+        ''' Вернуть статус соединения '''
+        return self.__status_connect
 
     def get_password(self):
         ''' Вернуть пароль '''
@@ -141,31 +154,34 @@ class Commands():
         ''' Соединение по ssh '''
         try:
             self.__ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.__ssh.connect(self.__parameters['ip'], username=self.__parameters['username'], password=self.__parameters['password'])
+            self.__ssh.connect(hostname=self.__parameters['ip'], port=int(self.__parameters['port']),
+                               username=self.__parameters['username'], password=self.__parameters['password'])
+            self.__status_connect = 'Ок'
             return True
-        except:
+        except Exception as exc:
+            self.__status_connect = 'Ошибка подключения по ssh: {}'.format(exc)
             return False
 
     def disconnect(self):
-        ''' Обрыв соединения по ssh '''
+        ''' Разрыв соединения по ssh '''
         if self.__ssh:
             self.__ssh.close()
 
     def command_daemon(self, cmd):
-        ''' Выполнение команды без вывода '''
+        ''' Выполнение ssh-команды без вывода '''
         _, _, _ = self.__ssh.exec_command(cmd)
 
     def command(self, cmd):
-        ''' Выполнение команды '''
+        ''' Выполнение ssh-команды '''
         try:
             ssh_stdin, ssh_stdout, ssh_stderr = self.__ssh.exec_command(cmd)
             self.set_line_stdin(ssh_stdin)
             self.set_line_stdout(ssh_stdout)
             self.set_line_stderr(ssh_stderr)
-        except:
+        except Exception as exc:
             self.set_line_stdin([''])
             self.set_line_stdout([''])
-            self.set_line_stderr(['ошибка подключения'])
+            self.set_line_stderr(['Ошибка {}, при выполнении ssh-команды: {}'.format(exc, cmd)])
 
     def command_script(self, script, name='description'):
         messange = '--------------\n{}:\n--------------'.format(name)
@@ -183,7 +199,12 @@ class Commands():
                     messange += '\n#: {}'.format(item)
                     messange += '\n> out:\n{}'.format('\n'.join(self.__line_stdout))
                     messange += '> error:\n{}'.format('\n'.join(self.__line_stderr))
-            self.disconnect()
+                self.disconnect()
         else:
             messange += ('\nОшибка выполнения сценария:\n{}'.format(script))
         return messange
+
+if __name__ == '__main__':
+    print('Даннный файл представляет собой модуль для использования в python')
+    parameters = globals()
+    print(parameters['__doc__'])
