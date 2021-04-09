@@ -1,5 +1,6 @@
-# jupyter file:
+# system file:
 .*/
+.*
 
 # python cache file:
 __pycache__/
@@ -10,5 +11,5 @@ __pycache__/
 *.iso
 
 # image
-#/**/*.jpg
-#/**/*.png
+#/tmp/**/*.jpg
+#/tmp/**/*.png
