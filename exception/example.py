@@ -22,6 +22,24 @@ def example_exc_1():
 
 def example_exc_2():
     '''
+	The exception the return code 1 to the operating system (echo $?) and the exception msg to the stdout
+    '''
+    try:
+        print(1/0)
+    except Exception as exc:
+        exc_type, exc_obj, exc_traceback = sys.exc_info()
+        print('Error:', exc)
+        print('----- info -----')
+        print('Type exc:', exc_type.__name__)
+        print('Message exc:', exc_obj)
+        print('File exc:', exc_traceback.tb_frame.f_code.co_filename)
+        print('Component exc:', exc_traceback.tb_frame.f_code.co_name)
+        print('line exc:', exc_traceback.tb_lineno)
+        print('----------------')
+        exit(1)
+
+def example_exc_3():
+    '''
 	The exception the return code 1 to the operating system (echo $?) and the exception body to the stderr
     '''
     try:
@@ -33,12 +51,15 @@ def example_exc_2():
 if __name__=='__main__':
     arg = sys.argv
     if len(arg) == 1:
-        print('Run this script with the parameter: example.py 1|2')
+        print('Run this script with the parameter: example.py 1|2|3')
     elif arg[1] == '1':
         print('example exception 1')
         example_exc_1()
     elif arg[1] == '2':
         print('example exception 2')
         example_exc_2()
+    elif arg[1] == '3':
+        print('example exception 3')
+        example_exc_3()
     else:
-        print('Incorrect parameter, use the one parameter as in the example: example.py 1|2')
+        print('Incorrect parameter, use the one parameter as in the example: example.py 1|2|3')
