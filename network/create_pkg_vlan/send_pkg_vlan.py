@@ -1,7 +1,7 @@
+#!/usr/bin/python3
 '''
 Генерация и отправка сетевого пакета с vlan
 '''
-#!/usr/bin/python3
 
 from sys import argv
 import argparse

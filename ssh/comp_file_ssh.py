@@ -183,8 +183,8 @@ class Comparison():
         ''' Конфигурация поиска файлов '''
         extra_param = self.__extra_param
         ignore_name = '-not -name "{}"'.format(self.__ignore_name) if self.__ignore_name else ''
-        check_md5sum = ('md5=($(md5sum -b "$1")); echo -ne "$md5\n";') if self.__check_md5sum else ('echo -ne "-\n";')
-        cmd = '''find {0} {1}  -type f {2} -printf "%p\t%h\t%f\t%u\t%g\t%s\t%TY-%Tm-%Td %TT\t" -exec bash -c '{3}' excec-sh {{}} ';'
+        check_md5sum = 'md5=($(md5sum -b "$1")); echo -ne "$md5\n";' if self.__check_md5sum else 'echo -ne "-\n";'
+        cmd = '''find {0} {1} -type f {2} -printf "%p\t%h\t%f\t%u\t%g\t%s\t%TY-%Tm-%Td %TT\t" -exec bash -c '{3}' excec-sh {{}} ';'
               '''.format(directory, extra_param, ignore_name, check_md5sum)
         return cmd
 
