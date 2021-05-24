@@ -1,0 +1,54 @@
+#!/usr/bin/python3
+
+A = []
+Ax = []
+Nx = 5
+Ny = 6
+
+print('create matrix {}x{}:'.format(Nx, Ny))
+for item in range(Nx): Ax.append(None)
+for item in range(Ny): A.append(Ax.copy())
+for item in A: print(item)
+print('------------------')
+
+print('set start position:')
+x = 0
+y = 0
+dx = 1
+dy = 0
+print('x = {} (step: {})\ny = {} (step: {})'.format(x, dx, y, dy))
+print('------------------')
+
+# matrix size
+N = Nx * Ny
+print('matrix size N = Nx x Ny = {} x {} = {}'.format(Nx, Ny, N))
+print('------------------')
+
+# set boundary conditions
+x_min = 0
+x_max = Nx - 1
+y_min = 0
+y_max = Ny - 1
+
+# for item in element matrix
+for element in range(N):
+	print('position:\nx = {}<{}<{} (step: {})\ny = {}<{}<{} (step: {})'.format(x_min, x, x_max, dx, y_min, y, y_max, dy))
+	A[y][x] = element + 1
+	for item in A: print(item)
+	print('------------------')
+	# change direction
+	if dx > 0 and x >= x_max:
+		y_min += dx
+		dx, dy = -dy, dx
+	elif dx < 0 and x <= x_min:
+		y_max += dx
+		dx, dy = -dy, dx
+	elif dy > 0 and y >= y_max:
+		x_max -= dy
+		dx, dy = -dy, dx
+	elif dy < 0 and y <= y_min:
+		x_min -= dy
+		dx, dy = -dy, dx
+
+	x += dx
+	y += dy
