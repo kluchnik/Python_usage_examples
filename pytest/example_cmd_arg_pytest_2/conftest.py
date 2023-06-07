@@ -15,7 +15,8 @@ def pytest_generate_tests(metafunc):
 
   option_value = metafunc.config.option.param2
   if 'param2' in metafunc.fixturenames and option_value is not None:
-    metafunc.parametrize("param_2", (option_value, ))
+    param_list = option_value.split(',')
+    metafunc.parametrize("param_2", param_list)
 
   option_value = metafunc.config.option.param3
   if 'param3' in metafunc.fixturenames and option_value is not None:
